@@ -90,8 +90,8 @@ public class InventarioController {
             @ApiResponse(responseCode = "400", description = "Solicitud invalida"),
             @ApiResponse(responseCode = "401", description = "No autorizado")
     })
-    public ResponseEntity<InventarioResponse> registrarMovimiento(@Valid @RequestBody InventarioRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(inventarioService.save(toEntity(request))));
+    public ResponseEntity<EntityModel<InventarioResponse>> registrarMovimiento(@Valid @RequestBody InventarioRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(toModel(inventarioService.save(toEntity(request))));
     }
 
     @PutMapping("/{id}")
@@ -102,14 +102,14 @@ public class InventarioController {
             @ApiResponse(responseCode = "401", description = "No autorizado"),
             @ApiResponse(responseCode = "404", description = "Movimiento no encontrado")
     })
-    public ResponseEntity<InventarioResponse> actualizarMovimiento(
+    public ResponseEntity<EntityModel<InventarioResponse>> actualizarMovimiento(
             @Parameter(description = "Identificador del movimiento de inventario", example = "12") @PathVariable Long id,
             @Valid @RequestBody InventarioRequest request) {
         Inventario existente = inventarioService.findById(id);
         if (existente != null) {
             Inventario inventario = toEntity(request);
             inventario.setId(id);
-            return ResponseEntity.ok(toResponse(inventarioService.save(inventario)));
+            return ResponseEntity.ok(toModel(inventarioService.save(inventario)));
         }
         return ResponseEntity.notFound().build();
     }

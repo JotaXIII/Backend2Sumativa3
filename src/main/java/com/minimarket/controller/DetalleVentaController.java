@@ -13,10 +13,16 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 /** Administra lineas de venta y relaciona productos con ventas registradas */
 @RestController
@@ -39,10 +45,13 @@ public class DetalleVentaController {
             @ApiResponse(responseCode = "200", description = "Detalles obtenidos correctamente"),
             @ApiResponse(responseCode = "401", description = "No autorizado")
     })
-    public List<DetalleVentaResponse> listarDetalleVentas() {
-        return detalleVentaService.findAll().stream()
-                .map(this::toResponse)
+    public CollectionModel<EntityModel<DetalleVentaResponse>> listarDetalleVentas() {
+        List<EntityModel<DetalleVentaResponse>> detalles = detalleVentaService.findAll().stream()
+                .map(this::toModel)
                 .toList();
+
+        return CollectionModel.of(detalles,
+                linkTo(methodOn(DetalleVentaController.class).listarDetalleVentas()).withSelfRel());
     }
 
     @GetMapping("/venta/{ventaId}")
@@ -51,11 +60,14 @@ public class DetalleVentaController {
             @ApiResponse(responseCode = "200", description = "Detalles obtenidos correctamente"),
             @ApiResponse(responseCode = "401", description = "No autorizado")
     })
-    public List<DetalleVentaResponse> listarDetallesPorVenta(
+    public CollectionModel<EntityModel<DetalleVentaResponse>> listarDetallesPorVenta(
             @Parameter(description = "Identificador de la venta", example = "5") @PathVariable Long ventaId) {
-        return detalleVentaService.findByVentaId(ventaId).stream()
-                .map(this::toResponse)
+        List<EntityModel<DetalleVentaResponse>> detalles = detalleVentaService.findByVentaId(ventaId).stream()
+                .map(this::toModel)
                 .toList();
+
+        return CollectionModel.of(detalles,
+                linkTo(methodOn(DetalleVentaController.class).listarDetallesPorVenta(ventaId)).withSelfRel());
     }
 
     @GetMapping("/{id}")
@@ -65,10 +77,10 @@ public class DetalleVentaController {
             @ApiResponse(responseCode = "401", description = "No autorizado"),
             @ApiResponse(responseCode = "404", description = "Detalle no encontrado")
     })
-    public ResponseEntity<DetalleVentaResponse> obtenerDetalleVentaPorId(
+    public ResponseEntity<EntityModel<DetalleVentaResponse>> obtenerDetalleVentaPorId(
             @Parameter(description = "Identificador del detalle de venta", example = "21") @PathVariable Long id) {
         DetalleVenta detalleVenta = detalleVentaService.findById(id);
-        return (detalleVenta != null) ? ResponseEntity.ok(toResponse(detalleVenta)) : ResponseEntity.notFound().build();
+        return (detalleVenta != null) ? ResponseEntity.ok(toModel(detalleVenta)) : ResponseEntity.notFound().build();
     }
 
     @PostMapping
@@ -78,8 +90,8 @@ public class DetalleVentaController {
             @ApiResponse(responseCode = "400", description = "Solicitud invalida"),
             @ApiResponse(responseCode = "401", description = "No autorizado")
     })
-    public DetalleVentaResponse guardarDetalleVenta(@Valid @RequestBody DetalleVentaRequest request) {
-        return toResponse(detalleVentaService.save(toEntity(request)));
+    public ResponseEntity<EntityModel<DetalleVentaResponse>> guardarDetalleVenta(@Valid @RequestBody DetalleVentaRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(toModel(detalleVentaService.save(toEntity(request))));
     }
 
     @PutMapping("/{id}")
@@ -90,14 +102,14 @@ public class DetalleVentaController {
             @ApiResponse(responseCode = "401", description = "No autorizado"),
             @ApiResponse(responseCode = "404", description = "Detalle no encontrado")
     })
-    public ResponseEntity<DetalleVentaResponse> actualizarDetalleVenta(
+    public ResponseEntity<EntityModel<DetalleVentaResponse>> actualizarDetalleVenta(
             @Parameter(description = "Identificador del detalle de venta", example = "21") @PathVariable Long id,
             @Valid @RequestBody DetalleVentaRequest request) {
         DetalleVenta existente = detalleVentaService.findById(id);
         if (existente != null) {
             DetalleVenta detalleVenta = toEntity(request);
             detalleVenta.setId(id);
-            return ResponseEntity.ok(toResponse(detalleVentaService.save(detalleVenta)));
+            return ResponseEntity.ok(toModel(detalleVentaService.save(detalleVenta)));
         }
         return ResponseEntity.notFound().build();
     }
@@ -119,6 +131,33 @@ public class DetalleVentaController {
         return ResponseEntity.notFound().build();
     }
 
+    private DetalleVenta toEntity(DetalleVentaRequest request) {
+        DetalleVenta detalleVenta = new DetalleVenta();
+        detalleVenta.setVenta(ventaService.findById(request.ventaId()));
+        detalleVenta.setProducto(productoService.findById(request.productoId()));
+        detalleVenta.setCantidad(request.cantidad());
+        detalleVenta.setPrecio(request.precio());
+        return detalleVenta;
+    }
+
+    private EntityModel<DetalleVentaResponse> toModel(DetalleVenta detalleVenta) {
+        EntityModel<DetalleVentaResponse> model = EntityModel.of(toResponse(detalleVenta));
+        model.add(linkTo(methodOn(DetalleVentaController.class).obtenerDetalleVentaPorId(detalleVenta.getId())).withSelfRel());
+        model.add(linkTo(methodOn(DetalleVentaController.class).listarDetalleVentas()).withRel("detalles"));
+
+        if (detalleVenta.getVenta() != null && detalleVenta.getVenta().getId() != null) {
+            model.add(linkTo(methodOn(VentaController.class)
+                    .obtenerVentaPorId(detalleVenta.getVenta().getId())).withRel("venta"));
+        }
+
+        if (detalleVenta.getProducto() != null && detalleVenta.getProducto().getId() != null) {
+            model.add(linkTo(methodOn(ProductoController.class)
+                    .obtenerProductoPorId(detalleVenta.getProducto().getId())).withRel("producto"));
+        }
+
+        return model;
+    }
+
     private DetalleVentaResponse toResponse(DetalleVenta detalleVenta) {
         Long ventaId = detalleVenta.getVenta() != null ? detalleVenta.getVenta().getId() : null;
         Long productoId = detalleVenta.getProducto() != null ? detalleVenta.getProducto().getId() : null;
@@ -132,14 +171,5 @@ public class DetalleVentaController {
                 detalleVenta.getCantidad(),
                 detalleVenta.getPrecio()
         );
-    }
-
-    private DetalleVenta toEntity(DetalleVentaRequest request) {
-        DetalleVenta detalleVenta = new DetalleVenta();
-        detalleVenta.setVenta(ventaService.findById(request.ventaId()));
-        detalleVenta.setProducto(productoService.findById(request.productoId()));
-        detalleVenta.setCantidad(request.cantidad());
-        detalleVenta.setPrecio(request.precio());
-        return detalleVenta;
     }
 }

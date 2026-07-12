@@ -11,10 +11,16 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 /** Administra categorias usando DTOs para evitar exponer entidades JPA */
 @RestController
@@ -32,8 +38,13 @@ public class CategoriaController {
             @ApiResponse(responseCode = "401", description = "No autorizado"),
             @ApiResponse(responseCode = "403", description = "Acceso denegado por rol")
     })
-    public List<CategoriaResponse> listarCategorias() {
-        return categoriaService.findAll().stream().map(this::toResponse).toList();
+    public CollectionModel<EntityModel<CategoriaResponse>> listarCategorias() {
+        List<EntityModel<CategoriaResponse>> categorias = categoriaService.findAll().stream()
+                .map(this::toModel)
+                .toList();
+
+        return CollectionModel.of(categorias,
+                linkTo(methodOn(CategoriaController.class).listarCategorias()).withSelfRel());
     }
 
     @GetMapping("/{id}")
@@ -44,10 +55,10 @@ public class CategoriaController {
             @ApiResponse(responseCode = "403", description = "Acceso denegado por rol"),
             @ApiResponse(responseCode = "404", description = "Categoria no encontrada")
     })
-    public ResponseEntity<CategoriaResponse> obtenerCategoriaPorId(
+    public ResponseEntity<EntityModel<CategoriaResponse>> obtenerCategoriaPorId(
             @Parameter(description = "Identificador de la categoria", example = "1") @PathVariable Long id) {
         Categoria categoria = categoriaService.findById(id);
-        return (categoria != null) ? ResponseEntity.ok(toResponse(categoria)) : ResponseEntity.notFound().build();
+        return (categoria != null) ? ResponseEntity.ok(toModel(categoria)) : ResponseEntity.notFound().build();
     }
 
     @PostMapping
@@ -58,8 +69,8 @@ public class CategoriaController {
             @ApiResponse(responseCode = "401", description = "No autorizado"),
             @ApiResponse(responseCode = "403", description = "Acceso denegado por rol")
     })
-    public CategoriaResponse guardarCategoria(@Valid @RequestBody CategoriaRequest request) {
-        return toResponse(categoriaService.save(toEntity(request)));
+    public ResponseEntity<EntityModel<CategoriaResponse>> guardarCategoria(@Valid @RequestBody CategoriaRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(toModel(categoriaService.save(toEntity(request))));
     }
 
     @PutMapping("/{id}")
@@ -71,14 +82,14 @@ public class CategoriaController {
             @ApiResponse(responseCode = "403", description = "Acceso denegado por rol"),
             @ApiResponse(responseCode = "404", description = "Categoria no encontrada")
     })
-    public ResponseEntity<CategoriaResponse> actualizarCategoria(
+    public ResponseEntity<EntityModel<CategoriaResponse>> actualizarCategoria(
             @Parameter(description = "Identificador de la categoria", example = "1") @PathVariable Long id,
             @Valid @RequestBody CategoriaRequest request) {
         Categoria categoriaExistente = categoriaService.findById(id);
         if (categoriaExistente != null) {
             Categoria categoria = toEntity(request);
             categoria.setId(id);
-            return ResponseEntity.ok(toResponse(categoriaService.save(categoria)));
+            return ResponseEntity.ok(toModel(categoriaService.save(categoria)));
         }
         return ResponseEntity.notFound().build();
     }
@@ -105,6 +116,13 @@ public class CategoriaController {
         Categoria categoria = new Categoria();
         categoria.setNombre(request.nombre());
         return categoria;
+    }
+
+    private EntityModel<CategoriaResponse> toModel(Categoria categoria) {
+        EntityModel<CategoriaResponse> model = EntityModel.of(toResponse(categoria));
+        model.add(linkTo(methodOn(CategoriaController.class).obtenerCategoriaPorId(categoria.getId())).withSelfRel());
+        model.add(linkTo(methodOn(CategoriaController.class).listarCategorias()).withRel("categorias"));
+        return model;
     }
 
     private CategoriaResponse toResponse(Categoria categoria) {

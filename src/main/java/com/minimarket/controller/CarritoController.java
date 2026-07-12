@@ -78,8 +78,8 @@ public class CarritoController {
             @ApiResponse(responseCode = "400", description = "Solicitud invalida"),
             @ApiResponse(responseCode = "401", description = "No autorizado")
     })
-    public ResponseEntity<CarritoResponse> agregarProductoAlCarrito(@Valid @RequestBody CarritoRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(carritoService.save(toEntity(request))));
+    public ResponseEntity<EntityModel<CarritoResponse>> agregarProductoAlCarrito(@Valid @RequestBody CarritoRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(toModel(carritoService.save(toEntity(request))));
     }
 
     @PutMapping("/{id}")
@@ -90,14 +90,14 @@ public class CarritoController {
             @ApiResponse(responseCode = "401", description = "No autorizado"),
             @ApiResponse(responseCode = "404", description = "Item del carrito no encontrado")
     })
-    public ResponseEntity<CarritoResponse> actualizarCarrito(
+    public ResponseEntity<EntityModel<CarritoResponse>> actualizarCarrito(
             @Parameter(description = "Identificador del item de carrito", example = "7") @PathVariable Long id,
             @Valid @RequestBody CarritoRequest request) {
         Carrito existente = carritoService.findById(id);
         if (existente != null) {
             Carrito carrito = toEntity(request);
             carrito.setId(id);
-            return ResponseEntity.ok(toResponse(carritoService.save(carrito)));
+            return ResponseEntity.ok(toModel(carritoService.save(carrito)));
         }
         return ResponseEntity.notFound().build();
     }

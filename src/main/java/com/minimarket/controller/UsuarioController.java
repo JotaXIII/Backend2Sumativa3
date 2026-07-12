@@ -101,8 +101,8 @@ public class UsuarioController {
             @ApiResponse(responseCode = "400", description = "Solicitud invalida"),
             @ApiResponse(responseCode = "401", description = "No autorizado")
     })
-    public ResponseEntity<UsuarioResponse> guardarUsuario(@Valid @RequestBody UsuarioRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(usuarioService.save(toEntity(request))));
+    public ResponseEntity<EntityModel<UsuarioResponse>> guardarUsuario(@Valid @RequestBody UsuarioRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(toModel(usuarioService.save(toEntity(request))));
     }
 
     @PutMapping("/{id}")
@@ -113,14 +113,14 @@ public class UsuarioController {
             @ApiResponse(responseCode = "401", description = "No autorizado"),
             @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
     })
-    public ResponseEntity<UsuarioResponse> actualizarUsuario(
+    public ResponseEntity<EntityModel<UsuarioResponse>> actualizarUsuario(
             @Parameter(description = "Identificador del usuario", example = "3") @PathVariable Long id,
             @Valid @RequestBody UsuarioRequest request) {
         Optional<Usuario> usuarioExistente = usuarioService.findById(id);
         if (usuarioExistente.isPresent()) {
             Usuario usuario = toEntity(request);
             usuario.setId(id);
-            return ResponseEntity.ok(toResponse(usuarioService.save(usuario)));
+            return ResponseEntity.ok(toModel(usuarioService.save(usuario)));
         }
         return ResponseEntity.notFound().build();
     }

@@ -74,8 +74,8 @@ public class ProductoController {
             @ApiResponse(responseCode = "400", description = "Solicitud invalida"),
             @ApiResponse(responseCode = "401", description = "No autorizado")
     })
-    public ResponseEntity<ProductoResponse> guardarProducto(@Valid @RequestBody ProductoRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(productoService.save(toEntity(request))));
+    public ResponseEntity<EntityModel<ProductoResponse>> guardarProducto(@Valid @RequestBody ProductoRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(toModel(productoService.save(toEntity(request))));
     }
 
     @PutMapping("/{id}")
@@ -86,14 +86,14 @@ public class ProductoController {
             @ApiResponse(responseCode = "401", description = "No autorizado"),
             @ApiResponse(responseCode = "404", description = "Producto no encontrado")
     })
-    public ResponseEntity<ProductoResponse> actualizarProducto(
+    public ResponseEntity<EntityModel<ProductoResponse>> actualizarProducto(
             @Parameter(description = "Identificador del producto", example = "10") @PathVariable Long id,
             @Valid @RequestBody ProductoRequest request) {
         Producto productoExistente = productoService.findById(id);
         if (productoExistente != null) {
             Producto producto = toEntity(request);
             producto.setId(id);
-            return ResponseEntity.ok(toResponse(productoService.save(producto)));
+            return ResponseEntity.ok(toModel(productoService.save(producto)));
         }
         return ResponseEntity.notFound().build();
     }

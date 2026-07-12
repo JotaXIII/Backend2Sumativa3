@@ -91,8 +91,8 @@ public class VentaController {
             @ApiResponse(responseCode = "400", description = "Solicitud invalida"),
             @ApiResponse(responseCode = "401", description = "No autorizado")
     })
-    public ResponseEntity<VentaResponse> guardarVenta(@Valid @RequestBody VentaRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(ventaService.save(toEntity(request))));
+    public ResponseEntity<EntityModel<VentaResponse>> guardarVenta(@Valid @RequestBody VentaRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(toModel(ventaService.save(toEntity(request))));
     }
 
     private EntityModel<VentaResponse> toModel(Venta venta) {
