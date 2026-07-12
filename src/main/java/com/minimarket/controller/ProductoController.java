@@ -6,8 +6,10 @@ import com.minimarket.entity.Producto;
 import com.minimarket.service.CategoriaService;
 import com.minimarket.service.ProductoService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.hateoas.CollectionModel;
@@ -24,6 +26,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 /** Administra productos, categorias asociadas y enlaces REST documentados */
 @RestController
 @RequestMapping("/api/productos")
+@Tag(name = "Productos")
 public class ProductoController {
 
     @Autowired
@@ -33,7 +36,7 @@ public class ProductoController {
     private CategoriaService categoriaService;
 
     @GetMapping
-    @Operation(summary = "Lista todos los productos")
+    @Operation(summary = "Lista todos los productos", description = "Retorna la coleccion de productos con enlaces HATEOAS hacia cada recurso.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Productos obtenidos correctamente"),
             @ApiResponse(responseCode = "401", description = "No autorizado")
@@ -48,13 +51,14 @@ public class ProductoController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Obtiene un producto por ID")
+    @Operation(summary = "Obtiene un producto por ID", description = "Retorna un producto individual con enlaces a si mismo, coleccion, inventario y categoria.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Producto obtenido correctamente"),
             @ApiResponse(responseCode = "401", description = "No autorizado"),
             @ApiResponse(responseCode = "404", description = "Producto no encontrado")
     })
-    public ResponseEntity<EntityModel<ProductoResponse>> obtenerProductoPorId(@PathVariable Long id) {
+    public ResponseEntity<EntityModel<ProductoResponse>> obtenerProductoPorId(
+            @Parameter(description = "Identificador del producto", example = "10") @PathVariable Long id) {
         Producto producto = productoService.findById(id);
         if (producto == null) {
             return ResponseEntity.notFound().build();
@@ -64,7 +68,7 @@ public class ProductoController {
     }
 
     @PostMapping
-    @Operation(summary = "Crea un producto")
+    @Operation(summary = "Crea un producto", description = "Registra un nuevo producto asociado a una categoria existente.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Producto creado correctamente"),
             @ApiResponse(responseCode = "400", description = "Solicitud invalida"),
@@ -75,14 +79,16 @@ public class ProductoController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Actualiza un producto")
+    @Operation(summary = "Actualiza un producto", description = "Reemplaza los datos de un producto existente manteniendo su identificador.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Producto actualizado correctamente"),
             @ApiResponse(responseCode = "400", description = "Solicitud invalida"),
             @ApiResponse(responseCode = "401", description = "No autorizado"),
             @ApiResponse(responseCode = "404", description = "Producto no encontrado")
     })
-    public ResponseEntity<ProductoResponse> actualizarProducto(@PathVariable Long id, @Valid @RequestBody ProductoRequest request) {
+    public ResponseEntity<ProductoResponse> actualizarProducto(
+            @Parameter(description = "Identificador del producto", example = "10") @PathVariable Long id,
+            @Valid @RequestBody ProductoRequest request) {
         Producto productoExistente = productoService.findById(id);
         if (productoExistente != null) {
             Producto producto = toEntity(request);
@@ -93,13 +99,14 @@ public class ProductoController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Elimina un producto")
+    @Operation(summary = "Elimina un producto", description = "Elimina un producto existente si no existen restricciones de integridad.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Producto eliminado correctamente"),
             @ApiResponse(responseCode = "401", description = "No autorizado"),
             @ApiResponse(responseCode = "404", description = "Producto no encontrado")
     })
-    public ResponseEntity<Void> eliminarProducto(@PathVariable Long id) {
+    public ResponseEntity<Void> eliminarProducto(
+            @Parameter(description = "Identificador del producto", example = "10") @PathVariable Long id) {
         Producto producto = productoService.findById(id);
         if (producto != null) {
             productoService.deleteById(id);

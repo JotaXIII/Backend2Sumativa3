@@ -1,6 +1,8 @@
 ### Archivos locales y salidas generadas del proyecto ###
 HELP.md
 target/
+scripts/
+postman/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/

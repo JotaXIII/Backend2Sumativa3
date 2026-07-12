@@ -8,8 +8,10 @@ import com.minimarket.entity.Usuario;
 import com.minimarket.repository.RolRepository;
 import com.minimarket.service.UsuarioService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.hateoas.CollectionModel;
@@ -29,6 +31,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 /** Administra usuarios y roles mediante DTOs de entrada y respuesta */
 @RestController
 @RequestMapping("/api/usuarios")
+@Tag(name = "Usuarios")
 public class UsuarioController {
 
     @Autowired
@@ -38,7 +41,7 @@ public class UsuarioController {
     private RolRepository rolRepository;
 
     @GetMapping
-    @Operation(summary = "Lista los usuarios registrados")
+    @Operation(summary = "Lista los usuarios registrados", description = "Retorna usuarios sin exponer contrasenas y con enlaces hacia roles y ventas.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Usuarios obtenidos correctamente"),
             @ApiResponse(responseCode = "401", description = "No autorizado")
@@ -53,13 +56,14 @@ public class UsuarioController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Obtiene un usuario por ID")
+    @Operation(summary = "Obtiene un usuario por ID", description = "Retorna un usuario individual con enlaces HATEOAS a roles, ventas y coleccion.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Usuario obtenido correctamente"),
             @ApiResponse(responseCode = "401", description = "No autorizado"),
             @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
     })
-    public ResponseEntity<EntityModel<UsuarioResponse>> obtenerUsuarioPorId(@PathVariable Long id) {
+    public ResponseEntity<EntityModel<UsuarioResponse>> obtenerUsuarioPorId(
+            @Parameter(description = "Identificador del usuario", example = "3") @PathVariable Long id) {
         Optional<Usuario> usuario = usuarioService.findById(id);
         if (usuario.isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -69,13 +73,14 @@ public class UsuarioController {
     }
 
     @GetMapping("/{id}/roles")
-    @Operation(summary = "Lista los roles de un usuario")
+    @Operation(summary = "Lista los roles de un usuario", description = "Permite revisar los roles asignados a un usuario especifico.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Roles obtenidos correctamente"),
             @ApiResponse(responseCode = "401", description = "No autorizado"),
             @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
     })
-    public ResponseEntity<CollectionModel<RolResponse>> listarRolesPorUsuario(@PathVariable Long id) {
+    public ResponseEntity<CollectionModel<RolResponse>> listarRolesPorUsuario(
+            @Parameter(description = "Identificador del usuario", example = "3") @PathVariable Long id) {
         Optional<Usuario> usuario = usuarioService.findById(id);
         if (usuario.isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -90,7 +95,7 @@ public class UsuarioController {
     }
 
     @PostMapping
-    @Operation(summary = "Crea un usuario")
+    @Operation(summary = "Crea un usuario", description = "Registra un usuario con contrasena cifrada y roles existentes.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Usuario creado correctamente"),
             @ApiResponse(responseCode = "400", description = "Solicitud invalida"),
@@ -101,14 +106,16 @@ public class UsuarioController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Actualiza un usuario")
+    @Operation(summary = "Actualiza un usuario", description = "Actualiza credenciales y roles de un usuario existente.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Usuario actualizado correctamente"),
             @ApiResponse(responseCode = "400", description = "Solicitud invalida"),
             @ApiResponse(responseCode = "401", description = "No autorizado"),
             @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
     })
-    public ResponseEntity<UsuarioResponse> actualizarUsuario(@PathVariable Long id, @Valid @RequestBody UsuarioRequest request) {
+    public ResponseEntity<UsuarioResponse> actualizarUsuario(
+            @Parameter(description = "Identificador del usuario", example = "3") @PathVariable Long id,
+            @Valid @RequestBody UsuarioRequest request) {
         Optional<Usuario> usuarioExistente = usuarioService.findById(id);
         if (usuarioExistente.isPresent()) {
             Usuario usuario = toEntity(request);
@@ -119,13 +126,14 @@ public class UsuarioController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Elimina un usuario")
+    @Operation(summary = "Elimina un usuario", description = "Elimina un usuario existente si no existen dependencias que lo impidan.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Usuario eliminado correctamente"),
             @ApiResponse(responseCode = "401", description = "No autorizado"),
             @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
     })
-    public ResponseEntity<Void> eliminarUsuario(@PathVariable Long id) {
+    public ResponseEntity<Void> eliminarUsuario(
+            @Parameter(description = "Identificador del usuario", example = "3") @PathVariable Long id) {
         Optional<Usuario> usuario = usuarioService.findById(id);
         if (usuario.isPresent()) {
             usuarioService.deleteById(id);
