@@ -79,10 +79,41 @@ class ApiDocumentationAndSecurityTest {
                 .andExpect(jsonPath("$._embedded.productoResponseList[0]._links.self.href", containsString("/api/productos/")));
     }
 
+    @Test
+    @WithMockUser(authorities = "ADMIN")
+    void crearProductoRetornaEnlacesHateoas() throws Exception {
+        Categoria categoria = guardarCategoria("Categoria Fideos");
+
+        mockMvc.perform(post("/api/productos")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "nombre": "Fideos",
+                                  "precio": 1290.0,
+                                  "stock": 20,
+                                  "categoriaId": %d
+                                }
+                                """.formatted(categoria.getId())))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$._links.self.href", containsString("/api/productos/")))
+                .andExpect(jsonPath("$._links.productos.href", containsString("/api/productos")))
+                .andExpect(jsonPath("$._links.inventario.href", containsString("/api/inventario/producto/")))
+                .andExpect(jsonPath("$._links.categoria.href", containsString("/api/categorias/" + categoria.getId())));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ADMIN")
+    void categoriaIndividualIncluyeEnlacesHateoas() throws Exception {
+        Categoria categoria = guardarCategoria("Categoria Bebidas");
+
+        mockMvc.perform(get("/api/categorias/{id}", categoria.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$._links.self.href", containsString("/api/categorias/" + categoria.getId())))
+                .andExpect(jsonPath("$._links.categorias.href", containsString("/api/categorias")));
+    }
+
     private Producto guardarProducto(String nombre) {
-        Categoria categoria = new Categoria();
-        categoria.setNombre("Categoria " + nombre);
-        Categoria categoriaGuardada = categoriaRepository.save(categoria);
+        Categoria categoriaGuardada = guardarCategoria("Categoria " + nombre);
 
         Producto producto = new Producto();
         producto.setNombre(nombre);
@@ -91,5 +122,11 @@ class ApiDocumentationAndSecurityTest {
         producto.setCategoria(categoriaGuardada);
 
         return productoRepository.save(producto);
+    }
+
+    private Categoria guardarCategoria(String nombre) {
+        Categoria categoria = new Categoria();
+        categoria.setNombre(nombre);
+        return categoriaRepository.save(categoria);
     }
 }

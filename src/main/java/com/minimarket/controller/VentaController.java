@@ -6,8 +6,10 @@ import com.minimarket.entity.Venta;
 import com.minimarket.service.UsuarioService;
 import com.minimarket.service.VentaService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.hateoas.CollectionModel;
@@ -25,6 +27,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 /** Administra ventas asociadas a usuarios y publica enlaces de navegacion */
 @RestController
 @RequestMapping("/api/ventas")
+@Tag(name = "Ventas")
 public class VentaController {
 
     @Autowired
@@ -34,7 +37,7 @@ public class VentaController {
     private UsuarioService usuarioService;
 
     @GetMapping
-    @Operation(summary = "Lista las ventas")
+    @Operation(summary = "Lista las ventas", description = "Retorna ventas registradas con enlaces a detalles y usuario.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Ventas obtenidas correctamente"),
             @ApiResponse(responseCode = "401", description = "No autorizado")
@@ -49,12 +52,13 @@ public class VentaController {
     }
 
     @GetMapping("/usuario/{usuarioId}")
-    @Operation(summary = "Lista ventas por usuario")
+    @Operation(summary = "Lista ventas por usuario", description = "Filtra las ventas asociadas a un usuario especifico.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Ventas obtenidas correctamente"),
             @ApiResponse(responseCode = "401", description = "No autorizado")
     })
-    public CollectionModel<EntityModel<VentaResponse>> listarVentasPorUsuario(@PathVariable Long usuarioId) {
+    public CollectionModel<EntityModel<VentaResponse>> listarVentasPorUsuario(
+            @Parameter(description = "Identificador del usuario", example = "3") @PathVariable Long usuarioId) {
         List<EntityModel<VentaResponse>> ventas = ventaService.findByUsuarioId(usuarioId).stream()
                 .map(this::toModel)
                 .toList();
@@ -64,13 +68,14 @@ public class VentaController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Obtiene una venta por ID")
+    @Operation(summary = "Obtiene una venta por ID", description = "Retorna una venta individual con enlaces HATEOAS.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Venta obtenida correctamente"),
             @ApiResponse(responseCode = "401", description = "No autorizado"),
             @ApiResponse(responseCode = "404", description = "Venta no encontrada")
     })
-    public ResponseEntity<EntityModel<VentaResponse>> obtenerVentaPorId(@PathVariable Long id) {
+    public ResponseEntity<EntityModel<VentaResponse>> obtenerVentaPorId(
+            @Parameter(description = "Identificador de la venta", example = "5") @PathVariable Long id) {
         Venta venta = ventaService.findById(id);
         if (venta == null) {
             return ResponseEntity.notFound().build();
@@ -80,14 +85,14 @@ public class VentaController {
     }
 
     @PostMapping
-    @Operation(summary = "Crea una venta")
+    @Operation(summary = "Crea una venta", description = "Registra una venta asociada a un usuario existente.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Venta creada correctamente"),
             @ApiResponse(responseCode = "400", description = "Solicitud invalida"),
             @ApiResponse(responseCode = "401", description = "No autorizado")
     })
-    public ResponseEntity<VentaResponse> guardarVenta(@Valid @RequestBody VentaRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(ventaService.save(toEntity(request))));
+    public ResponseEntity<EntityModel<VentaResponse>> guardarVenta(@Valid @RequestBody VentaRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(toModel(ventaService.save(toEntity(request))));
     }
 
     private EntityModel<VentaResponse> toModel(Venta venta) {
